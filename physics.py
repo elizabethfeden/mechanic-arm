@@ -1,10 +1,12 @@
+import pygame
 import pymunk
 import pymunk.pygame_util
 
 from objects import Objects
 
 
-def get_print_options(screen=None):
+def get_print_options(screen: pygame.Surface = None
+                      ) -> pymunk.SpaceDebugDrawOptions:
   return (pymunk.pygame_util.DrawOptions(screen) if screen is not None
           else pymunk.SpaceDebugDrawOptions())
 
@@ -24,6 +26,6 @@ class Simulation:
   def step(self):
     self.space.step(0.02)
     
-  def render(self, print_options):
+  def render(self, print_options: pymunk.SpaceDebugDrawOptions):
     self.space.debug_draw(print_options)
 

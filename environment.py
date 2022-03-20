@@ -6,7 +6,7 @@ import physics
 
 
 class Environment(gym.Env):
-  def __init__(self, pygame_render=True):
+  def __init__(self, pygame_render: bool = True):
     super(Environment, self).__init__()
     
     # self.observation_space = #
