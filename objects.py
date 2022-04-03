@@ -13,6 +13,8 @@ def _create_shape(
   body.position = position
   shape = shape_constructor(body)
   shape.mass = mass
+  shape.elasticity = 0.999
+  shape.friction = 1
   return shape
 
 
@@ -30,12 +32,13 @@ def create_circle(
                        lambda body: pymunk.Circle(body, radius))
 
 
+import arm
+
+
 class Objects:
-  def __init__(self, space: pymunk.Space):
-    self.square = create_rect((70, 20), (50, 50))
-    self.circle = create_circle((150, 20), 25)
-    self.dynamic_shapes = [self.square, self.circle]
-    
-    self.floor = pymunk.Segment(space.static_body, (0, 500), (500, 550), 0)
-    self.static_shapes = [self.floor]
+  def __init__(self, static_body: pymunk.Body):
+    self.arm = arm.Arm(static_body, pymunk.Vec2d(400, 350))
+    self.dynamic_shapes = self.arm.dynamic_shapes
+    self.static_shapes = []
+    self.joints = self.arm.joints
     

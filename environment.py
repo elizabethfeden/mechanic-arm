@@ -25,8 +25,9 @@ class Environment(gym.Env):
     
   def reset(self):
     self._physics = physics.Simulation()
-    self._objects = objects.Objects(self._physics.space)
+    self._objects = objects.Objects(self._physics.space.static_body)
     self._physics.add_objects(self._objects)
+    self.current_power = 0
     
   def render(self):
     if self._pygame_render:
@@ -39,5 +40,17 @@ class Environment(gym.Env):
       self._clock.tick(50)
     
   def step(self, action):
+    for index, cur_action in zip([0, 2], action):
+      if cur_action == 1:
+        self._objects.arm.fix([index, index + 1])
+      elif cur_action == 2:
+        self._objects.arm.apply_force_to_circle(index, -1)
+      elif cur_action == 3:
+        self._objects.arm.apply_force_to_circle(index, 1)
+      elif cur_action == 0:
+        pass
+      else:
+        raise Exception('Invalid action')
+    
     self._physics.step()
 
