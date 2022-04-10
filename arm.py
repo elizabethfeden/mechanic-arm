@@ -50,5 +50,5 @@ class Arm:
     
   def fix(self, indices):
     for i in indices:
-      self.dynamic_shapes[i].body.velocity = (0, 0)
+      self.dynamic_shapes[i].body.angular_velocity = 0
       
