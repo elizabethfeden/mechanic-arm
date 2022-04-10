@@ -9,6 +9,13 @@ def get_print_options(screen: pygame.Surface = None
                       ) -> pymunk.SpaceDebugDrawOptions:
   return (pymunk.pygame_util.DrawOptions(screen) if screen is not None
           else pymunk.SpaceDebugDrawOptions())
+       
+          
+def debug_print(body: pymunk.Body):
+  print(f'velocity {body.velocity}\n'
+        f'moment {body.moment}\n'
+        f'force {body.force}\n'
+        f'energy {body.kinetic_energy}\n')
 
 
 class Simulation:
@@ -22,6 +29,9 @@ class Simulation:
     
     for shape in objects.static_shapes:
       self.space.add(shape)
+      
+    for joint in objects.joints:
+      self.space.add(joint)
     
   def step(self):
     self.space.step(0.02)
