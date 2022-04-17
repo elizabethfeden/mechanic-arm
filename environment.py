@@ -9,8 +9,7 @@ class Environment(gym.Env):
   def __init__(self, pygame_render: bool = True):
     super(Environment, self).__init__()
     
-    # self.observation_space = #
-    # self.action_space = #
+    self.max_reward = 50
     
     self.reset()
     
@@ -20,12 +19,14 @@ class Environment(gym.Env):
       self._screen = pygame.display.set_mode((600, 600))
       self._clock = pygame.time.Clock()
       self._pymunk_options = physics.get_print_options(self._screen)
+      self._font = pygame.font.SysFont(None, 30)
     else:
       self._pymunk_options = physics.get_print_options()
     
   def reset(self):
     self._objects = objects.Objects()
     self._physics = physics.Simulation(self._objects)
+    self.total_reward = 0
     
   def render(self):
     if self._pygame_render:
@@ -34,6 +35,9 @@ class Environment(gym.Env):
     self._physics.render(self._pymunk_options)
     
     if self._pygame_render:
+      text = self._font.render(str(self.total_reward), True, pygame.Color('black'))
+      self._screen.blit(text, (0, 0))
+      
       pygame.display.flip()
       self._clock.tick(50)
     
@@ -54,4 +58,19 @@ class Environment(gym.Env):
         raise Exception('Invalid action')
     
     self._physics.step()
+    
+    done = False
+    box_state = self._objects.box_state()
+    if box_state == objects.BoxState.DEFAULT:
+      reward = 0
+    elif box_state == objects.BoxState.TOUCHES_FLOOR:
+      reward = 1
+    else:
+      reward = -self.max_reward
+      done = True
+    self.total_reward += reward
+    if self.total_reward >= self.max_reward:
+      done = True
+      
+    return self._objects.get_info(), reward, done, []
 

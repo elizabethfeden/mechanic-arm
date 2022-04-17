@@ -23,10 +23,7 @@ class Simulation:
     self.space = pymunk.Space()
     self.space.gravity = (0, 400)
     
-    for shape in objects.static_shapes:
-      self.space.add(shape.body, shape)
-      
-    for shape in objects.dynamic_shapes:
+    for shape in objects.all_shapes:
       self.space.add(shape.body, shape)
       
     for joint in objects.joints:
