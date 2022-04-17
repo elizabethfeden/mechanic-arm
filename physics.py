@@ -19,19 +19,19 @@ def debug_print(body: pymunk.Body):
 
 
 class Simulation:
-  def __init__(self):
+  def __init__(self, objects: Objects):
     self.space = pymunk.Space()
     self.space.gravity = (0, 400)
     
-  def add_objects(self, objects: Objects):
+    for shape in objects.static_shapes:
+      self.space.add(shape.body, shape)
+      
     for shape in objects.dynamic_shapes:
       self.space.add(shape.body, shape)
-    
-    for shape in objects.static_shapes:
-      self.space.add(shape)
       
     for joint in objects.joints:
       self.space.add(joint)
+    
     
   def step(self):
     self.space.step(0.02)
