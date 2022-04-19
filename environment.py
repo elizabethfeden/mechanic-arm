@@ -6,10 +6,12 @@ import physics
 
 
 class Environment(gym.Env):
+  N_ACTIONS = 16
+  MAX_REWARD = 50
+  MIN_REWARD = 0
+
   def __init__(self, pygame_render: bool = True):
     super(Environment, self).__init__()
-    
-    self.max_reward = 50
     
     self.reset()
     
@@ -27,17 +29,24 @@ class Environment(gym.Env):
     self._objects = objects.Objects()
     self._physics = physics.Simulation(self._objects)
     self.total_reward = 0
-    
-  def render(self):
+    return self._objects.get_info()
+
+  def render_text(self, text, position):
+    if not self._pygame_render:
+      return
+    pygame_text = self._font.render(text, True, pygame.Color('black'))
+    self._screen.blit(pygame_text, position)
+
+  def render_clear(self):
     if self._pygame_render:
       self._screen.fill(pygame.Color('white'))
-      
+    
+  def render(self):
     self._physics.render(self._pymunk_options)
+
+    self.render_text('reward: ' + str(self.total_reward), (0, 0))
     
     if self._pygame_render:
-      text = self._font.render(str(self.total_reward), True, pygame.Color('black'))
-      self._screen.blit(text, (0, 0))
-      
       pygame.display.flip()
       self._clock.tick(50)
     
@@ -66,11 +75,14 @@ class Environment(gym.Env):
     elif box_state == objects.BoxState.TOUCHES_FLOOR:
       reward = 1
     else:
-      reward = -self.max_reward
+      reward = 0
       done = True
     self.total_reward += reward
-    if self.total_reward >= self.max_reward:
+    if self.total_reward >= self.MAX_REWARD:
       done = True
       
     return self._objects.get_info(), reward, done, []
+    
+  def step_scalar_action(self, action):
+    return self.step([action // 4, action % 4])
 

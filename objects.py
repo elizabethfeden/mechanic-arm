@@ -67,7 +67,7 @@ class BoxState(enum.Enum):
 class Objects:
   def __init__(self):
     self.arm = arm.Arm(pymunk.Vec2d(400, 350))
-    self.floor = create_rect((80, 550), (200, 20), is_static=True)
+    self.floor = create_rect((80, 550), (150, 20), is_static=True)
     self.floor.elasticity = 0.2
     self.box = create_rect(
         self.arm.rect2.body.position + (0, -40), (40, 40), 1)
@@ -82,7 +82,7 @@ class Objects:
     info = np.zeros((num_objects, NUM_SHAPE_FEATURES))
     for i in range(num_objects):
       info[i] = np.array(shape_info(self.all_shapes[i]))
-    return info
+    return info.T.reshape((1,-1))
     
   def box_state(self) -> BoxState:
     result = BoxState.DEFAULT
@@ -96,7 +96,7 @@ class Objects:
     return result
     
     
-NUM_SHAPE_FEATURES = 10
+NUM_SHAPE_FEATURES = 4
 
 
 def shape_info(shape: pymunk.Shape):
@@ -104,12 +104,21 @@ def shape_info(shape: pymunk.Shape):
   # width, height, type, is_static
   return [
       *shape.body.position,
-      shape.body.mass,
+      #shape.body.mass,
       *shape.body.velocity,
-      shape.body.kinetic_energy,
-      shape.properties['width'],
-      shape.properties['height'],
-      shape.properties['type'],
-      int(shape.body.body_type == pymunk.Body.STATIC),
+      #shape.body.kinetic_energy,
+      #shape.properties['width'],
+      #shape.properties['height'],
+      #shape.properties['type'],
+      #int(shape.body.body_type == pymunk.Body.STATIC),
   ]
+
+  
+def discretize(info: np.ndarray, lows, highs, steps):
+  result = np.zeros_like(info)
+  for i, row in enumerate(info):
+    bins = np.arange(lows[i], highs[i] + steps[i], steps[i])
+    result[i] = np.digitize(row, bins)
+  return result.reshape((1, -1))
+
     
