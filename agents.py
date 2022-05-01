@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.neural_network import MLPClassifier as Classifier
+from classifiers import MLPClassifier
 
 
 class Agent:
@@ -34,11 +34,11 @@ class CrossEntropyAgent(Agent):
 
  
 class CrossEntropyFitter:
-  def __init__(self, env, n_sessions=100, n_elites=10):
+  def __init__(self, env, n_sessions=50, n_elites=10):
     self.env = env
     self.n_sessions = n_sessions
     self.n_elites = n_elites
-    self.policy = Classifier()
+    self.policy = MLPClassifier(hidden_layer_sizes=(25,), random_state=16)
     self.best_reward = env.MIN_REWARD + 1
     self._pseudo_fit()
     
@@ -46,9 +46,7 @@ class CrossEntropyFitter:
     state = self.env.reset()[0]
     X = np.array([state] * self.env.N_ACTIONS)
     y = np.arange(self.env.N_ACTIONS)
-    self.policy.fit(X, y)
-    for _ in range(4):
-      self.fit_epoch(random=True)
+    self.policy.partial_fit(X, y, list(range(self.env.N_ACTIONS)))
     
   def _simulate_session(self, random):
     if random:
@@ -69,7 +67,7 @@ class CrossEntropyFitter:
     y = np.array(sum([elite.history_actions for elite in elites], []))
     self.policy.partial_fit(X, y)
     
-  def fit_epoch(self, random=False, verbose=False):
+  def fit_epoch(self, random=False, verbose=()):
     agents = []
     rewards = []
     for _ in range(self.n_sessions):
@@ -77,16 +75,19 @@ class CrossEntropyFitter:
       agents += [new_agent]
       rewards += [reward]
 
-      if verbose:
+      if 'history' in verbose:
         print(reward, new_agent.history_actions)
 
-    indices = np.argsort(np.array(rewards))
+    rewards = np.array(rewards)
+    indices = np.argsort(rewards)
     elites = [agents[i] for i in indices][-self.n_elites:]
-    if rewards[indices[0]] >= self.best_reward:
-      print('here', rewards[indices[0]], self.best_reward)
-      self.best_reward = rewards[indices[0]]
+    if 'rewards' in verbose:
+      print(rewards.mean(), np.median(rewards), rewards[indices])
+    if rewards[indices[-1]] >= self.best_reward:
+      self.best_reward = rewards[indices[-1]]
       self._refit(elites)
-    #print('coefs', self.policy.coefs_)
-        
+      if 'coefs' in verbose:
+        print(self.policy.coefs_)
+
     return elites[-1]
     

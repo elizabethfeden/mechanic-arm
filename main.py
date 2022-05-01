@@ -35,8 +35,7 @@ def run_interactive_simulation():
       
 def run_rl():
   env = Environment()
-  fitter = agents.CrossEntropyFitter(env)
-  #best = agents.Agent(n_actions=16)
+  fitter = agents.CrossEntropyFitter(env, n_sessions=200, n_elites=50)
   running = True
   wins = 0
   total = 0
@@ -45,7 +44,7 @@ def run_rl():
       if event.type == pygame.QUIT:
         running = False
 
-    best = fitter.fit_epoch()
+    best = fitter.fit_epoch(verbose=('rewards',))
     best.reevaluate(env.reset())
     
     done = False
