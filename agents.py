@@ -40,6 +40,8 @@ class CrossEntropyFitter:
     self.n_elites = n_elites
     self.policy = MLPClassifier(hidden_layer_sizes=(25,), random_state=16)
     self.best_reward = env.MIN_REWARD + 1
+    self.mean_rewards = []
+    self.median_rewards = []
     self._pseudo_fit()
     
   def _pseudo_fit(self):
@@ -76,17 +78,25 @@ class CrossEntropyFitter:
       rewards += [reward]
 
       if 'history' in verbose:
+        print('=== history ===')
         print(reward, new_agent.history_actions)
 
     rewards = np.array(rewards)
     indices = np.argsort(rewards)
     elites = [agents[i] for i in indices][-self.n_elites:]
+
+    mean, median = rewards.mean(), np.median(rewards)
+    self.mean_rewards += [mean]
+    self.median_rewards += [median]
     if 'rewards' in verbose:
-      print(rewards.mean(), np.median(rewards), rewards[indices])
+      print('=== rewards ===')
+      print(mean, median, rewards[indices])
+
     if rewards[indices[-1]] >= self.best_reward:
       self.best_reward = rewards[indices[-1]]
       self._refit(elites)
       if 'coefs' in verbose:
+        print('=== coefs ===')
         print(self.policy.coefs_)
 
     return elites[-1]

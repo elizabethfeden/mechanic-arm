@@ -1,3 +1,4 @@
+import numpy as np
 import pygame
 import sys
 
@@ -31,7 +32,7 @@ def run_interactive_simulation():
     
     if done:
       env.reset()
-      
+
       
 def run_rl():
   env = Environment()
@@ -39,17 +40,23 @@ def run_rl():
   running = True
   wins = 0
   total = 0
+  moving_average_num = 10
+  rewards = np.array([0] * moving_average_num)
+  averages = []
+  current_index = 0
   while running:
-    for event in pygame.event.get():
-      if event.type == pygame.QUIT:
-        running = False
-
     best = fitter.fit_epoch(verbose=('rewards',))
     best.reevaluate(env.reset())
-    
+
     done = False
+    total_reward = 0
     while not done:
-      info, _, done, _ = env.step_scalar_action(best.action())
+      for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+          running = False
+
+      info, reward, done, _ = env.step_scalar_action(best.action())
+      total_reward += reward
       best.reevaluate(info)
       env.render_clear()
       if total > 0:
@@ -60,6 +67,14 @@ def run_rl():
     total += 1
     if env.total_reward == env.MAX_REWARD:
       wins += 1
+    rewards[current_index] = total_reward
+    current_index = (current_index + 1) % moving_average_num
+    averages += [rewards.mean()]
+
+  with open('results.txt', 'w') as file:
+    file.write(str(fitter.mean_rewards) + '\n')
+    file.write(str(fitter.median_rewards) + '\n')
+    file.write(str(averages))
     
 
 if __name__ == '__main__':
