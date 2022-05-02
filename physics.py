@@ -29,7 +29,6 @@ class Simulation:
     for joint in objects.joints:
       self.space.add(joint)
     
-    
   def step(self):
     self.space.step(0.02)
     

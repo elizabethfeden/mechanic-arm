@@ -1,5 +1,7 @@
 import gym
+import numpy as np
 import pygame
+from typing import List, Tuple
 
 import objects
 import physics
@@ -11,7 +13,7 @@ class Environment(gym.Env):
   MIN_REWARD = 0
 
   def __init__(self, pygame_render: bool = True):
-    super(Environment, self).__init__()
+    super().__init__()
     
     self.reset()
     
@@ -25,13 +27,13 @@ class Environment(gym.Env):
     else:
       self._pymunk_options = physics.get_print_options()
     
-  def reset(self):
+  def reset(self) -> np.ndarray:
     self._objects = objects.Objects()
     self._physics = physics.Simulation(self._objects)
     self.total_reward = 0
     return self._objects.get_info()
 
-  def render_text(self, text, position):
+  def render_text(self, text: str, position: Tuple[int, int]):
     if not self._pygame_render:
       return
     pygame_text = self._font.render(text, True, pygame.Color('black'))
@@ -49,8 +51,18 @@ class Environment(gym.Env):
     if self._pygame_render:
       pygame.display.flip()
       self._clock.tick(50)
+
+  def _calculate_reward(self) -> Tuple[int, bool]:
+    box_state = self._objects.box_state()
+    done = box_state == objects.BoxState.OUT_OF_BOUNDS
+    reward = 1 if box_state == objects.BoxState.TOUCHES_FLOOR else 0
+    self.total_reward += reward
+    if self.total_reward >= self.MAX_REWARD:
+      self.total_reward = self.MAX_REWARD
+      done = True
+    return reward, done
     
-  def step(self, action):
+  def step(self, action: List[int]) -> Tuple[np.ndarray, int, bool]:
     for index, cur_action in zip([0, 2], action):
       if cur_action == 1:
         if index == 0:
@@ -65,24 +77,10 @@ class Environment(gym.Env):
         pass
       else:
         raise Exception('Invalid action')
-    
+
     self._physics.step()
+    return self._objects.get_info(), *self._calculate_reward()
     
-    done = False
-    box_state = self._objects.box_state()
-    if box_state == objects.BoxState.DEFAULT:
-      reward = 0
-    elif box_state == objects.BoxState.TOUCHES_FLOOR:
-      reward = 1
-    else:
-      reward = 0
-      done = True
-    self.total_reward += reward
-    if self.total_reward >= self.MAX_REWARD:
-      done = True
-      
-    return self._objects.get_info(), reward, done, []
-    
-  def step_scalar_action(self, action):
+  def step_scalar_action(self, action: int) -> Tuple[np.ndarray, int, bool]:
     return self.step([action // 4, action % 4])
 

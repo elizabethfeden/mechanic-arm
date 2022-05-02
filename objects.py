@@ -36,9 +36,6 @@ def create_rect(
   shape = _create_shape(position,
                         lambda body: pymunk.Poly.create_box(body, size),
                         mass, is_static)
-  shape.properties = {}
-  shape.properties['type'] = 1
-  shape.properties['width'], shape.properties['height'] = size
   return shape
     
     
@@ -49,9 +46,6 @@ def create_circle(
   shape = _create_shape(position,
                         lambda body: pymunk.Circle(body, radius),
                         mass, is_static)
-  shape.properties = {}
-  shape.properties['type'] = 2
-  shape.properties['width'], shape.properties['height'] = radius, radius
   return shape
 
 
@@ -77,12 +71,12 @@ class Objects:
     self.all_shapes = self.static_shapes + self.dynamic_shapes
     self.joints = self.arm.joints
     
-  def get_info(self):
+  def get_info(self) -> np.ndarray:
     num_objects = len(self.all_shapes)
     info = np.zeros((num_objects, NUM_SHAPE_FEATURES))
     for i in range(num_objects):
       info[i] = np.array(shape_info(self.all_shapes[i]))
-    return info.T.reshape((1,-1))
+    return info.T.reshape((1, -1))
     
   def box_state(self) -> BoxState:
     result = BoxState.DEFAULT
@@ -100,25 +94,9 @@ NUM_SHAPE_FEATURES = 4
 
 
 def shape_info(shape: pymunk.Shape):
-  # position_x, position_y, mass, velocity_x, velocity_y, kinetic_energy,
-  # width, height, type, is_static
   return [
       *shape.body.position,
-      #shape.body.mass,
       *shape.body.velocity,
-      #shape.body.kinetic_energy,
-      #shape.properties['width'],
-      #shape.properties['height'],
-      #shape.properties['type'],
-      #int(shape.body.body_type == pymunk.Body.STATIC),
   ]
-
-  
-def discretize(info: np.ndarray, lows, highs, steps):
-  result = np.zeros_like(info)
-  for i, row in enumerate(info):
-    bins = np.arange(lows[i], highs[i] + steps[i], steps[i])
-    result[i] = np.digitize(row, bins)
-  return result.reshape((1, -1))
 
     

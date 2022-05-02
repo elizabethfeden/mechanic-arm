@@ -23,7 +23,7 @@ def run_interactive_simulation():
       if event.type == pygame.QUIT:
         running = False
   
-    _, _, done, _ = env.step([
+    _, _, done = env.step([
           process_keys([pygame.K_SPACE, pygame.K_LEFT, pygame.K_RIGHT]),
           process_keys([pygame.K_f, pygame.K_a, pygame.K_d]),
     ])
@@ -55,7 +55,7 @@ def run_rl():
         if event.type == pygame.QUIT:
           running = False
 
-      info, reward, done, _ = env.step_scalar_action(best.action())
+      info, reward, done = env.step_scalar_action(best.action())
       total_reward += reward
       best.reevaluate(info)
       env.render_clear()
