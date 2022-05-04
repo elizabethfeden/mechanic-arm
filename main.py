@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import numpy as np
 import pygame
 import sys
@@ -33,19 +34,41 @@ def run_interactive_simulation():
     if done:
       env.reset()
 
-      
-def run_rl():
-  env = Environment()
+
+def _run_fitter(best_pipe_in: mp.connection.Connection,
+                results_pipe_in: mp.connection.Connection,
+                running_pipe_out: mp.connection.Connection):
+  env = Environment(pygame_render=False)
   fitter = agents.CrossEntropyFitter(env, n_sessions=200, n_elites=50)
+  while running_pipe_out.recv():
+    best = fitter.fit_epoch(verbose=('rewards',))
+    best_pipe_in.send(best)
+  results_pipe_in.send((fitter.mean_rewards, fitter.median_rewards))
+  best_pipe_in.close()
+  running_pipe_out.close()
+  results_pipe_in.close()
+
+
+def run_rl():
+  best_pipe_out, best_pipe_in = mp.Pipe(duplex=False)
+  results_pipe_out, results_pipe_in = mp.Pipe(duplex=False)
+  running_pipe_out, running_pipe_in = mp.Pipe(duplex=False)
+  fitter_process = mp.Process(
+    target=_run_fitter, args=(best_pipe_in, results_pipe_in, running_pipe_out))
+  fitter_process.start()
+
   running = True
-  wins = 0
-  total = 0
-  moving_average_num = 10
+  running_pipe_in.send(True)
+
+  wins, total = 0, 0
+  moving_average_num = 20
   rewards = np.array([0] * moving_average_num)
   averages = []
   current_index = 0
+  env = Environment()
   while running:
-    best = fitter.fit_epoch(verbose=('rewards',))
+    running_pipe_in.send(True)
+    best = best_pipe_out.recv()
     best.reevaluate(env.reset())
 
     done = False
@@ -54,6 +77,7 @@ def run_rl():
       for event in pygame.event.get():
         if event.type == pygame.QUIT:
           running = False
+          running_pipe_in.send(False)
 
       info, reward, done = env.step_scalar_action(best.action())
       total_reward += reward
@@ -62,6 +86,8 @@ def run_rl():
       if total > 0:
         env.render_text('wins%: {:.2f}'.format(wins / total * 100), (0, 40))
       env.render_text(f'total: {total}', (0, 60))
+      if not running:
+        env.render_text('Preparing to shut down...', (200, 40))
       env.render()
 
     total += 1
@@ -71,9 +97,14 @@ def run_rl():
     current_index = (current_index + 1) % moving_average_num
     averages += [rewards.mean()]
 
+  mean_rewards, median_rewards = results_pipe_out.recv()
+  best_pipe_out.close()
+  running_pipe_in.close()
+  results_pipe_out.close()
+
   with open('results.txt', 'w') as file:
-    file.write(str(fitter.mean_rewards) + '\n')
-    file.write(str(fitter.median_rewards) + '\n')
+    file.write(str(mean_rewards) + '\n')
+    file.write(str(median_rewards) + '\n')
     file.write(str(averages))
     
 
