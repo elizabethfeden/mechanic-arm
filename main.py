@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import numpy as np
+import pickle
 import pygame
 import sys
 
@@ -38,8 +39,7 @@ def run_interactive_simulation():
 def _run_fitter(best_pipe_in: mp.connection.Connection,
                 results_pipe_in: mp.connection.Connection,
                 running_pipe_out: mp.connection.Connection):
-  env = Environment(pygame_render=False)
-  fitter = agents.CrossEntropyFitter(env, n_sessions=200, n_elites=50)
+  fitter = agents.CrossEntropyFitter(n_sessions=200, n_elites=50)
   while running_pipe_out.recv():
     best = fitter.fit_epoch(verbose=('rewards',))
     best_pipe_in.send(best)
@@ -49,10 +49,42 @@ def _run_fitter(best_pipe_in: mp.connection.Connection,
   results_pipe_in.close()
 
 
+def _simulate_best_game(best_pipe_out: mp.connection.Connection,
+                        running_pipe_in: mp.connection.Connection,
+                        env: Environment, wins: int, total: int):
+  best = best_pipe_out.recv()
+  best.reevaluate(env.reset())
+
+  running = True
+  running_pipe_in.send(True)
+
+  done = False
+  total_reward = 0
+  while not done:
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+        running = False
+        running_pipe_in.send(False)
+
+    info, reward, done = env.step_scalar_action(best.action())
+    total_reward += reward
+    best.reevaluate(info)
+
+    env.render_clear()
+    if total > 0:
+      env.render_text('wins%: {:.2f}'.format(wins / total * 100), (0, 40))
+    env.render_text(f'total: {total}', (0, 60))
+    if not running:
+      env.render_text('Preparing to shut down...', (200, 40))
+    env.render()
+
+  return running, total_reward, best
+
+
 def run_rl():
-  best_pipe_out, best_pipe_in = mp.Pipe(duplex=False)
-  results_pipe_out, results_pipe_in = mp.Pipe(duplex=False)
-  running_pipe_out, running_pipe_in = mp.Pipe(duplex=False)
+  best_pipe_out, best_pipe_in = mp.Pipe()
+  results_pipe_out, results_pipe_in = mp.Pipe()
+  running_pipe_out, running_pipe_in = mp.Pipe()
   fitter_process = mp.Process(
     target=_run_fitter, args=(best_pipe_in, results_pipe_in, running_pipe_out))
   fitter_process.start()
@@ -65,33 +97,13 @@ def run_rl():
   rewards = np.array([0] * moving_average_num)
   averages = []
   current_index = 0
-  env = Environment()
+  env = Environment(pygame_render=True)
   while running:
-    running_pipe_in.send(True)
-    best = best_pipe_out.recv()
-    best.reevaluate(env.reset())
-
-    done = False
-    total_reward = 0
-    while not done:
-      for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-          running = False
-          running_pipe_in.send(False)
-
-      info, reward, done = env.step_scalar_action(best.action())
-      total_reward += reward
-      best.reevaluate(info)
-      env.render_clear()
-      if total > 0:
-        env.render_text('wins%: {:.2f}'.format(wins / total * 100), (0, 40))
-      env.render_text(f'total: {total}', (0, 60))
-      if not running:
-        env.render_text('Preparing to shut down...', (200, 40))
-      env.render()
+    running, total_reward, best = _simulate_best_game(
+      best_pipe_out, running_pipe_in, env, wins, total)
 
     total += 1
-    if env.total_reward == env.MAX_REWARD:
+    if total_reward == env.MAX_REWARD:
       wins += 1
     rewards[current_index] = total_reward
     current_index = (current_index + 1) % moving_average_num
@@ -106,6 +118,8 @@ def run_rl():
     file.write(str(mean_rewards) + '\n')
     file.write(str(median_rewards) + '\n')
     file.write(str(averages))
+  with open('model', 'wb') as file:
+    pickle.dump(best.policy, file)
     
 
 if __name__ == '__main__':
