@@ -12,7 +12,7 @@ class Environment(gym.Env):
   MAX_REWARD = 50
   MIN_REWARD = 0
 
-  def __init__(self, pygame_render: bool = True):
+  def __init__(self, pygame_render: bool = False):
     super().__init__()
     
     self.reset()

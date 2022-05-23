@@ -1,8 +1,9 @@
+import multiprocessing as mp
 import numpy as np
 from typing import Any, List, Tuple
 
 from classifiers import MLPClassifier
-import environment
+from environment import Environment
 
 
 class Agent:
@@ -34,31 +35,31 @@ class CrossEntropyAgent(Agent):
   def reevaluate(self, info: np.ndarray):
     self.state = info
 
- 
+
 class CrossEntropyFitter:
-  def __init__(self, env: environment.Environment,
-               n_sessions: int = 50, n_elites: int = 10):
-    self.env = env
+  def __init__(self, n_sessions: int = 50, n_elites: int = 10):
     self.n_sessions = n_sessions
     self.n_elites = n_elites
     self.policy = MLPClassifier(hidden_layer_sizes=(25,), random_state=16)
-    self.best_reward = env.MIN_REWARD + 1
     self.mean_rewards = []
     self.median_rewards = []
     self._pseudo_fit()
     
   def _pseudo_fit(self):
-    state = self.env.reset()[0]
-    X = np.array([state] * self.env.N_ACTIONS)
-    y = np.arange(self.env.N_ACTIONS)
-    self.policy.partial_fit(X, y, list(range(self.env.N_ACTIONS)))
-    
+    env = Environment()
+    state = env.reset()[0]
+    self.best_reward = env.MIN_REWARD + 1
+    X = np.array([state] * env.N_ACTIONS)
+    y = np.arange(env.N_ACTIONS)
+    self.policy.partial_fit(X, y, list(range(env.N_ACTIONS)))
+
   def _simulate_session(self) -> Tuple[CrossEntropyAgent, int]:
-    agent = CrossEntropyAgent(self.env.N_ACTIONS, self.policy, self.env.reset())
+    env = Environment()
+    agent = CrossEntropyAgent(env.N_ACTIONS, self.policy, env.reset())
     total_reward = 0
     done = False
     while not done:
-      state, reward, done = self.env.step_scalar_action(agent.action())
+      state, reward, done = env.step_scalar_action(agent.action())
       agent.reevaluate(state)
       total_reward += reward
     return agent, total_reward
@@ -68,7 +69,7 @@ class CrossEntropyFitter:
     y = np.array(sum([elite.history_actions for elite in elites], []))
     self.policy.partial_fit(X, y)
     
-  def fit_epoch(self, verbose: Tuple[str] = ()):
+  def fit_epoch(self, verbose: Tuple[str] = (), n_jobs: int = 2):
     """
     Args:
       verbose is a tuple of possible options, which are:
@@ -79,16 +80,23 @@ class CrossEntropyFitter:
 
     Returns: the best performer of the epoch.
     """
+    pool = mp.Pool(n_jobs)
+    async_results = []
+    for _ in range(self.n_sessions):
+      async_results += [pool.apply_async(self._simulate_session)]
+    pool.close()
+    pool.join()
+
     agents = []
     rewards = []
-    for _ in range(self.n_sessions):
-      new_agent, reward = self._simulate_session()
-      agents += [new_agent]
+    for result in async_results:
+      agent, reward = result.get()
+      agents += [agent]
       rewards += [reward]
 
       if 'history' in verbose:
         print('=== history ===')
-        print(reward, new_agent.history_actions)
+        print(reward, agent.history_actions)
 
     rewards = np.array(rewards)
     indices = np.argsort(rewards)
