@@ -53,7 +53,8 @@ class CrossEntropyFitter:
     y = np.arange(env.N_ACTIONS)
     self.policy.partial_fit(X, y, list(range(env.N_ACTIONS)))
 
-  def _simulate_session(self) -> Tuple[CrossEntropyAgent, int]:
+  def _simulate_session(self, seed: int = 42) -> Tuple[CrossEntropyAgent, int]:
+    np.random.seed(seed)
     env = Environment()
     agent = CrossEntropyAgent(env.N_ACTIONS, self.policy, env.reset())
     total_reward = 0
@@ -82,8 +83,8 @@ class CrossEntropyFitter:
     """
     pool = mp.Pool(n_jobs)
     async_results = []
-    for _ in range(self.n_sessions):
-      async_results += [pool.apply_async(self._simulate_session)]
+    for i in range(self.n_sessions):
+      async_results += [pool.apply_async(self._simulate_session, args=(i * 39,))]
     pool.close()
     pool.join()
 

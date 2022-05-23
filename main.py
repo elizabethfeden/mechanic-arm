@@ -18,7 +18,7 @@ def process_keys(expected_keys):
   
   
 def run_interactive_simulation():
-  env = Environment()
+  env = Environment(pygame_render=True)
   running = True
   while running:
     for event in pygame.event.get():
@@ -34,6 +34,39 @@ def run_interactive_simulation():
     
     if done:
       env.reset()
+
+
+def run_random_agent():
+  env = Environment(pygame_render=True)
+  agent = agents.Agent(env.N_ACTIONS)
+
+  moving_average_num = 20
+  rewards = np.array([0] * moving_average_num)
+  averages = []
+  current_index = 0
+
+  running = True
+  while running:
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+        running = False
+
+    done = False
+    total_reward = 0
+    while not done:
+      _, reward, done = env.step_scalar_action(agent.action())
+      total_reward += reward
+      env.render_clear()
+      env.render()
+
+    rewards[current_index] = total_reward
+    current_index = (current_index + 1) % moving_average_num
+    averages += [rewards.mean()]
+
+    env.reset()
+
+  with open('results.txt', 'w') as file:
+    file.write(str(averages))
 
 
 def _run_fitter(best_pipe_in: mp.connection.Connection,
@@ -125,6 +158,8 @@ def run_rl():
 if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == '-i':
     run_interactive_simulation()
+  elif len(sys.argv) > 1 and sys.argv[1] == '-r':
+    run_random_agent()
   else:
     run_rl()
   

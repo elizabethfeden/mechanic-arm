@@ -30,7 +30,7 @@ class Simulation:
       self.space.add(joint)
     
   def step(self):
-    self.space.step(0.02)
+    self.space.step(0.03)
     
   def render(self, print_options: pymunk.SpaceDebugDrawOptions):
     self.space.debug_draw(print_options)
