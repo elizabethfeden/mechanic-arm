@@ -20,7 +20,7 @@ class Arm:
     self.start = start
   
     # We count shapes starting from `start`
-    # and to the fingers or whatewer the arm has
+    # and to the fingers or whatever the arm has
     self.circle1 = create_circle(start, 50)
     self.rect1 = create_rect(start + (-100, 0), (100, 40))
     self.circle2 = create_circle(start + (-150, 0), 20, 2)

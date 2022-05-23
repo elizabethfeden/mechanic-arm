@@ -50,7 +50,7 @@ class Environment(gym.Env):
     
     if self._pygame_render:
       pygame.display.flip()
-      self._clock.tick(50)
+      self._clock.tick(30)
 
   def _calculate_reward(self) -> Tuple[int, bool]:
     box_state = self._objects.box_state()
