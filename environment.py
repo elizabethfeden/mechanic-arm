@@ -1,10 +1,19 @@
+import enum
 import gym
 import numpy as np
-import pygame
+
 from typing import List, Tuple
 
 import objects
 import physics
+import pygame_window
+
+
+class Action(enum.IntEnum):
+  NOTHING = 0,
+  FIX = 1,
+  LEFT = 2,
+  RIGHT = 3,
 
 
 class Environment(gym.Env):
@@ -14,16 +23,12 @@ class Environment(gym.Env):
 
   def __init__(self, pygame_render: bool = False):
     super().__init__()
-    
     self.reset()
     
     self._pygame_render = pygame_render
     if pygame_render:
-      pygame.init()
-      self._screen = pygame.display.set_mode((600, 600))
-      self._clock = pygame.time.Clock()
-      self._pymunk_options = physics.get_print_options(self._screen)
-      self._font = pygame.font.SysFont(None, 30)
+      self.window = pygame_window.PygameWindow()
+      self._pymunk_options = physics.get_print_options(self.window.screen)
     else:
       self._pymunk_options = physics.get_print_options()
     
@@ -32,25 +37,12 @@ class Environment(gym.Env):
     self._physics = physics.Simulation(self._objects)
     self.total_reward = 0
     return self._objects.get_info()
-
-  def render_text(self, text: str, position: Tuple[int, int]):
-    if not self._pygame_render:
-      return
-    pygame_text = self._font.render(text, True, pygame.Color('black'))
-    self._screen.blit(pygame_text, position)
-
-  def render_clear(self):
-    if self._pygame_render:
-      self._screen.fill(pygame.Color('white'))
     
   def render(self):
     self._physics.render(self._pymunk_options)
-
-    self.render_text('reward: ' + str(self.total_reward), (0, 0))
-    
     if self._pygame_render:
-      pygame.display.flip()
-      self._clock.tick(30)
+      self.window.render_text('reward: ' + str(self.total_reward), (0, 0))
+      self.window.finish_render()
 
   def _calculate_reward(self) -> Tuple[int, bool]:
     box_state = self._objects.box_state()
@@ -64,16 +56,16 @@ class Environment(gym.Env):
     
   def step(self, action: List[int]) -> Tuple[np.ndarray, int, bool]:
     for index, cur_action in zip([0, 2], action):
-      if cur_action == 1:
+      if cur_action == Action.FIX:
         if index == 0:
           self._objects.arm.fix_velocity([index, index + 1])
         else:
-          self._objects.arm.fix([index, index + 1])
-      elif cur_action == 2:
+          self._objects.arm.fix_angle([index, index + 1])
+      elif cur_action == Action.LEFT:
         self._objects.arm.apply_force_to_circle(index, -1)
-      elif cur_action == 3:
+      elif cur_action == Action.RIGHT:
         self._objects.arm.apply_force_to_circle(index, 1)
-      elif cur_action == 0:
+      elif cur_action == Action.NOTHING:
         pass
       else:
         raise Exception('Invalid action')

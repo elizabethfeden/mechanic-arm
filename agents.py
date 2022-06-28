@@ -1,19 +1,30 @@
 import multiprocessing as mp
 import numpy as np
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 from classifiers import MLPClassifier
 from environment import Environment
 
 
 class Agent:
-  def __init__(self, n_actions: int):
+  def __init__(self, n_actions: int, policy: Optional[np.ndarray] = None):
     self.n_actions = n_actions
+    self.policy = policy or np.ones((n_actions,)) / n_actions
     
   def action(self) -> int:
-    return np.random.randint(self.n_actions)
+    return np.random.choice(self.n_actions, p=self.policy)
     
   def reevaluate(self, info: Any):
+    pass
+
+
+class Fitter:
+  def __init__(self):
+    self.mean_rewards = []
+    self.median_rewards = []
+    self.best_reward = 0
+
+  def fit_epoch(self, verbose: Tuple[str] = (), n_jobs: int = 2) -> Agent:
     pass
 
 
@@ -21,9 +32,12 @@ class CrossEntropyAgent(Agent):
   def __init__(self, n_actions: int, policy: Any, state: np.ndarray):
     super().__init__(n_actions)
     self.policy = policy
-    self.reevaluate(state)
+
+    self.state = None
     self.history_actions = []
     self.history_states = []
+
+    self.reevaluate(state)
     
   def action(self) -> int:
     proba = self.policy.predict_proba(self.state)[0]
@@ -36,27 +50,31 @@ class CrossEntropyAgent(Agent):
     self.state = info
 
 
-class CrossEntropyFitter:
-  def __init__(self, n_sessions: int = 50, n_elites: int = 10):
+class CrossEntropyFitter(Fitter):
+  def __init__(self, n_sessions: int = 50, n_elites: int = 10,
+               policy_hidden_layers: Tuple[int] = (25,),
+               policy_random_state: int = 16):
+    super().__init__()
     self.n_sessions = n_sessions
     self.n_elites = n_elites
-    self.policy = MLPClassifier(hidden_layer_sizes=(25,), random_state=16)
-    self.mean_rewards = []
-    self.median_rewards = []
-    self._pseudo_fit()
+
+    self._policy = MLPClassifier(hidden_layer_sizes=policy_hidden_layers,
+                                 random_state=policy_random_state)
+    self._pseudo_fit()  # Needed when using partial_fit
     
   def _pseudo_fit(self):
     env = Environment()
-    state = env.reset()[0]
     self.best_reward = env.MIN_REWARD + 1
+
+    state = env.reset()[0]
     X = np.array([state] * env.N_ACTIONS)
     y = np.arange(env.N_ACTIONS)
-    self.policy.partial_fit(X, y, list(range(env.N_ACTIONS)))
+    self._policy.partial_fit(X, y, list(range(env.N_ACTIONS)))
 
   def _simulate_session(self, seed: int = 42) -> Tuple[CrossEntropyAgent, int]:
     np.random.seed(seed)
     env = Environment()
-    agent = CrossEntropyAgent(env.N_ACTIONS, self.policy, env.reset())
+    agent = CrossEntropyAgent(env.N_ACTIONS, self._policy, env.reset())
     total_reward = 0
     done = False
     while not done:
@@ -68,9 +86,10 @@ class CrossEntropyFitter:
   def _refit(self, elites: List[CrossEntropyAgent]):
     X = np.array(np.vstack([elite.history_states for elite in elites]))
     y = np.array(sum([elite.history_actions for elite in elites], []))
-    self.policy.partial_fit(X, y)
+    self._policy.partial_fit(X, y)
     
-  def fit_epoch(self, verbose: Tuple[str] = (), n_jobs: int = 2):
+  def fit_epoch(self, verbose: Tuple[str] = (),
+                n_jobs: int = 2) -> CrossEntropyAgent:
     """
     Args:
       verbose is a tuple of possible options, which are:
@@ -79,12 +98,16 @@ class CrossEntropyFitter:
             as well as their mean and median;
         'coefs' - print classifier's coefficients after every refitting.
 
+      n_jobs is how many processes to use to simulate sessions.
+
     Returns: the best performer of the epoch.
     """
     pool = mp.Pool(n_jobs)
     async_results = []
     for i in range(self.n_sessions):
-      async_results += [pool.apply_async(self._simulate_session, args=(i * 39,))]
+      # Guarantee different random seeds for subprocesses
+      async_results += [pool.apply_async(self._simulate_session,
+                                         args=(i * 39 + 54,))]
     pool.close()
     pool.join()
 
@@ -115,7 +138,7 @@ class CrossEntropyFitter:
       self._refit(elites)
       if 'coefs' in verbose:
         print('=== coefs ===')
-        print(self.policy.coefs_)
+        print(self._policy.coefs_)
 
     return elites[-1]
     
