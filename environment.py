@@ -1,3 +1,5 @@
+"""Learning's environment. Responds to agent's actions by changing its state."""
+
 import enum
 import gym
 import numpy as np
@@ -55,6 +57,7 @@ class Environment(gym.Env):
     return reward, done
     
   def step(self, action: List[int]) -> Tuple[np.ndarray, int, bool]:
+    """Responds to the action, which is a number of Actions applied to each motor."""
     for index, cur_action in zip([0, 2], action):
       if cur_action == Action.FIX:
         if index == 0:

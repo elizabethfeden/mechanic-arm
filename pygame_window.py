@@ -1,3 +1,5 @@
+"""Pygame render management."""
+
 import pygame
 
 from typing import Tuple

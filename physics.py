@@ -1,3 +1,5 @@
+"""Pymunk physics simulation."""
+
 import pygame
 import pymunk
 import pymunk.pygame_util

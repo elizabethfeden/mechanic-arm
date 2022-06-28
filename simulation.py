@@ -1,3 +1,5 @@
+"""Unites fitting and representation, with or without multiprocessing."""
+
 import enum
 import multiprocessing as mp
 import numpy as np
@@ -31,6 +33,22 @@ class SaveOption(enum.Enum):
 
 
 class Simulation:
+  """Manages the interactions between fitters and presentation.
+
+  Attributes:
+    `agent` or `fitter`: correspondent objects of `agents.py` entities. Exactly
+        one of these two must be not None.
+    `parallel`: should multiprocessing be used (one process for fitting, another
+        for presentation). Will be ignored if `agent` is not None.
+    `save_options`: which of the results should be saved to file.
+    `moving_average_num`: specified for the moving average metric.
+    `env`: presentation Environment.
+   Will be available after run() execution:
+    `averages`: rewards moving averages after each epoch.
+    `mean_rewards` and `median_rewards`: corresponding metrics for each epoch
+      of cross entropy fitting.
+
+  """
   def __init__(self,
                agent: Optional[agents.Agent] = None,
                fitter: Optional[agents.Fitter] = None,

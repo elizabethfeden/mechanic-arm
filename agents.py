@@ -1,3 +1,5 @@
+"""Learning agents and algorithms for fitting them."""
+
 import multiprocessing as mp
 import numpy as np
 from typing import Any, List, Optional, Tuple
@@ -7,6 +9,7 @@ from environment import Environment
 
 
 class Agent:
+  """Default agent. Chooses random action based on probabilities in `policy` (uniform, by default)."""
   def __init__(self, n_actions: int, policy: Optional[np.ndarray] = None):
     self.n_actions = n_actions
     self.policy = policy or np.ones((n_actions,)) / n_actions
@@ -19,6 +22,7 @@ class Agent:
 
 
 class Fitter:
+  """Default fitter. This class may be considered abstract."""
   def __init__(self):
     self.mean_rewards = []
     self.median_rewards = []
@@ -29,6 +33,11 @@ class Fitter:
 
 
 class CrossEntropyAgent(Agent):
+  """Agent for cross entropy learning algorithms.
+
+  Chooses actions based on probabilities returned by `predict_proba` method
+  of `policy`. Also records all the states and actions chosen.
+  """
   def __init__(self, n_actions: int, policy: Any, state: np.ndarray):
     super().__init__(n_actions)
     self.policy = policy
@@ -90,7 +99,8 @@ class CrossEntropyFitter(Fitter):
     
   def fit_epoch(self, verbose: Tuple[str] = (),
                 n_jobs: int = 2) -> CrossEntropyAgent:
-    """
+    """Simulates `n_sessions` and fits the classifier based on simulation results.
+
     Args:
       verbose is a tuple of possible options, which are:
         'history' - print history of actions in each agent's simulated session;

@@ -1,3 +1,5 @@
+"""Utility package for `agents.py`."""
+
 import numpy as np
 from sklearn import neural_network
 

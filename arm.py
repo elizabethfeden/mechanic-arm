@@ -1,3 +1,5 @@
+"""Physical construction of the robotic arm."""
+
 import pymunk
 
 from objects import create_circle, create_rect, static_body
