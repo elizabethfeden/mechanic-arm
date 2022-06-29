@@ -1,0 +1,7 @@
+gym
+matplotlib
+numpy
+pygame
+pymunk
+sklearn
+

@@ -1,13 +1,17 @@
+"""Physical construction of the robotic arm."""
+
 import pymunk
 
 from objects import create_circle, create_rect, static_body
+
 
 class Arm:
   CIRCLE1_POWER = 20000
   CIRCLE2_POWER = 2000
   BASE_POWERS = (CIRCLE1_POWER, CIRCLE2_POWER)
   
-  def _create_pinjoints(self, circle, rect, rect_shape):
+  @staticmethod
+  def _create_pinjoints(circle, rect, rect_shape):
     w, h = rect_shape
     w_half, h_half = w // 2, h // 2
     west = pymunk.PinJoint(rect.body, circle.body, (w_half, h_half), (0, 0))
@@ -21,7 +25,7 @@ class Arm:
   
     # We count shapes starting from `start`
     # and to the fingers or whatever the arm has
-    self.circle1 = create_circle(start, 50)
+    self.circle1 = create_circle(start, 50)  # Yes, lots of magic numbers here and below :)
     self.rect1 = create_rect(start + (-100, 0), (100, 40))
     self.circle2 = create_circle(start + (-150, 0), 20, 2)
     self.rect2 = create_rect(start + (-195, 0), (50, 40), 2)
@@ -48,7 +52,7 @@ class Arm:
         circle.body.position + (0, circle.radius)
     )
     
-  def fix(self, indices):
+  def fix_angle(self, indices):
     for i in indices:
       self.dynamic_shapes[i].body.angular_velocity = 0
       

@@ -1,3 +1,5 @@
+"""Utility package for plotting the saved results."""
+
 import sys
 import matplotlib.pyplot as plt
 
