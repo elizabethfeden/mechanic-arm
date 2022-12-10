@@ -66,6 +66,9 @@ class CrossEntropyFitter(Fitter):
     super().__init__()
     self.n_sessions = n_sessions
     self.n_elites = n_elites
+    
+    self.seed_coef = 39
+    np.random.seed(self.seed_coef - 2)
 
     self._policy = MLPClassifier(hidden_layer_sizes=policy_hidden_layers,
                                  random_state=policy_random_state)
@@ -87,7 +90,7 @@ class CrossEntropyFitter(Fitter):
     total_reward = 0
     done = False
     while not done:
-      state, reward, done = env.step_scalar_action(agent.action())
+      state, reward, done = env.step_buffer(agent)
       agent.reevaluate(state)
       total_reward += reward
     return agent, total_reward
@@ -98,7 +101,7 @@ class CrossEntropyFitter(Fitter):
     self._policy.partial_fit(X, y)
     
   def fit_epoch(self, verbose: Tuple[str] = (),
-                n_jobs: int = 2) -> CrossEntropyAgent:
+                n_jobs: int = 4) -> CrossEntropyAgent:
     """Simulates `n_sessions` and fits the classifier based on simulation results.
 
     Args:
@@ -112,12 +115,14 @@ class CrossEntropyFitter(Fitter):
 
     Returns: the best performer of the epoch.
     """
+    self.seed_coef += 13
+    
     pool = mp.Pool(n_jobs)
     async_results = []
     for i in range(self.n_sessions):
       # Guarantee different random seeds for subprocesses
       async_results += [pool.apply_async(self._simulate_session,
-                                         args=(i * 39 + 54,))]
+                                         args=(i * self.seed_coef + 54,))]
     pool.close()
     pool.join()
 

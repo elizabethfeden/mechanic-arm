@@ -24,8 +24,8 @@ def _create_shape(
   body.position = position
   shape = shape_constructor(body)
   shape.mass = mass
-  shape.elasticity = 0.999
-  shape.friction = 1
+  shape.elasticity = 0.7
+  shape.friction = 0.7
   return shape
 
 
@@ -52,19 +52,23 @@ def create_circle(
 import arm
 
 
-class BoxState(enum.Enum):
+class BoxState(enum.IntEnum):
     DEFAULT = 0,
     TOUCHES_FLOOR = 1,
-    OUT_OF_BOUNDS = 2,
+    TOUCHES_ARM = 2,
+    OUT_OF_BOUNDS = 4,
+    HIGHER = 8,
 
 
 class Objects:
   def __init__(self):
     self.arm = arm.Arm(pymunk.Vec2d(400, 350))
-    self.floor = create_rect((80, 550), (150, 20), is_static=True)
+    self.floor = create_rect((80, np.random.randint(250, 501)), (150, 20), is_static=True)
+    #self.floor = create_rect((80, 250), (150, 20), is_static=True)
     self.floor.elasticity = 0.2
     self.box = create_rect(
         self.arm.rect2.body.position + (0, -40), (40, 40), 1)
+    self.max_box_height = self.box.body.position.y
     
     self.dynamic_shapes = self.arm.dynamic_shapes + [self.box]
     self.static_shapes = [self.floor]
@@ -79,15 +83,26 @@ class Objects:
     return info.T.reshape((1, -1))
     
   def box_state(self) -> BoxState:
-    result = BoxState.DEFAULT
+    if (self.box.body.position.x < 0
+        or self.box.body.position.x > 900
+        or self.box.body.position.y < 0
+        or self.box.body.position.y > 900):
+      return BoxState.OUT_OF_BOUNDS
+
+    state = BoxState.DEFAULT
+
     if self.box.shapes_collide(self.floor).points:
-      result = BoxState.TOUCHES_FLOOR
-    elif (self.box.body.position.x < 0
-          or self.box.body.position.x > 900
-          or self.box.body.position.y < 0
-          or self.box.body.position.y > 900):
-      result = BoxState.OUT_OF_BOUNDS
-    return result
+      state |= BoxState.TOUCHES_FLOOR
+
+    for shape in self.arm.dynamic_shapes:
+      if self.box.shapes_collide(shape).points:
+        state |= BoxState.TOUCHES_ARM
+
+    if self.box.body.position.y < self.max_box_height:
+      state |= BoxState.HIGHER
+      self.max_box_height = self.box.body.position.y
+
+    return state
     
     
 NUM_SHAPE_FEATURES = 4

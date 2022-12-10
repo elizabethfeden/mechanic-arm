@@ -92,7 +92,7 @@ class Simulation:
     while not done:
       running = running and self.env.window.check_close_event()
 
-      info, reward, done = self.env.step_scalar_action(agent.action())
+      info, reward, done = self.env.step_buffer(agent)
       total_reward += reward
       agent.reevaluate(info)
 

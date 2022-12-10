@@ -6,8 +6,8 @@ from objects import create_circle, create_rect, static_body
 
 
 class Arm:
-  CIRCLE1_POWER = 20000
-  CIRCLE2_POWER = 2000
+  CIRCLE1_POWER = 30000
+  CIRCLE2_POWER = 5000
   BASE_POWERS = (CIRCLE1_POWER, CIRCLE2_POWER)
   
   @staticmethod
