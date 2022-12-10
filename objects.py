@@ -64,7 +64,6 @@ class Objects:
   def __init__(self):
     self.arm = arm.Arm(pymunk.Vec2d(400, 350))
     self.floor = create_rect((80, np.random.randint(250, 501)), (150, 20), is_static=True)
-    #self.floor = create_rect((80, 250), (150, 20), is_static=True)
     self.floor.elasticity = 0.2
     self.box = create_rect(
         self.arm.rect2.body.position + (0, -40), (40, 40), 1)

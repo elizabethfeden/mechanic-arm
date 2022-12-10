@@ -10,8 +10,6 @@ def main():
     raise Exception('Expected argument: file with model')
   with open(sys.argv[1], 'rb') as file:
     model = pickle.load(file)
-
-  #model.predict([[1]])
     
   structure = np.hstack((
       [model.n_features_in_],
