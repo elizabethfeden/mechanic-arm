@@ -59,9 +59,9 @@ class Layer():
 
         # assign different linewidths to lines depending on the size of the weight
         abs_weight = abs(weight)        
-        if abs_weight > 0.5: 
+        if abs_weight > 0.24:
             linewidth = 10*abs_weight
-        elif abs_weight > 0.8: 
+        elif abs_weight > 0.7:
             linewidth =  100*abs_weight
         else:
             linewidth = abs_weight

@@ -61,7 +61,7 @@ class CrossEntropyAgent(Agent):
 
 class CrossEntropyFitter(Fitter):
   def __init__(self, n_sessions: int = 50, n_elites: int = 10,
-               policy_hidden_layers: Tuple[int] = (25,),
+               policy_hidden_layers: Tuple[int] = (5,5,5),
                policy_random_state: int = 16):
     super().__init__()
     self.n_sessions = n_sessions
