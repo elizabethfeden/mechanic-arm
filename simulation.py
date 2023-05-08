@@ -2,10 +2,12 @@
 
 import enum
 import multiprocessing as mp
+
+import gym
 import numpy as np
 import pickle
 
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import agents
 from environment import Environment
@@ -36,6 +38,7 @@ class Simulation:
   """Manages the interactions between fitters and presentation.
 
   Attributes:
+    `env_creator`: gym.Env constructor, accepts argument `render: bool`
     `agent` or `fitter`: correspondent objects of `agents.py` entities. Exactly
         one of these two must be not None.
     `parallel`: should multiprocessing be used (one process for fitting, another
@@ -50,6 +53,7 @@ class Simulation:
 
   """
   def __init__(self,
+               env_creator: Callable[[bool], gym.Env],
                agent: Optional[agents.Agent] = None,
                fitter: Optional[agents.Fitter] = None,
                parallel: bool = False,
@@ -61,7 +65,8 @@ class Simulation:
     self.save_options = save_options
     self.moving_average_num = moving_average_num
 
-    self.env = Environment(pygame_render=True)
+    self.env_creator = env_creator
+    self.env = env_creator(True)
 
     self.averages, self.mean_rewards, self.median_rewards = [], [], []
 
@@ -92,7 +97,7 @@ class Simulation:
     while not done:
       running = running and self.env.window.check_close_event()
 
-      info, reward, done = self.env.step_buffer(agent)
+      info, reward, done = self.env.step_buffer(agent, 0)
       total_reward += reward
       agent.reevaluate(info)
 

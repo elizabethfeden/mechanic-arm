@@ -122,9 +122,9 @@ class Environment(gym.Env):
   def step_scalar_action(self, action: int) -> Tuple[np.ndarray, int, bool]:
     return self.step([action // 4, action % 4])
     
-  def step_buffer(self, agent) -> Tuple[np.ndarray, int, bool]:
+  def step_buffer(self, agent, eps=1) -> Tuple[np.ndarray, int, bool]:
     if self.cooldown_counter == 0:
-      self.prev_action = agent.action()
+      self.prev_action = agent.action(eps)
     self.cooldown_counter = (self.cooldown_counter + 1) % self.ACTION_COOLDOWN
     return self.step_scalar_action(self.prev_action)
 
