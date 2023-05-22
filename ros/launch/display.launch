@@ -1,21 +1,15 @@
 <launch>
   <arg
     name="model" />
-  <arg
-    name="gui"
-    default="True" />
   <param
     name="robot_description"
     textfile="$(find magician)/urdf/demo.urdf" />
-  <param
-    name="use_gui"
-    value="$(arg gui)" />
   <node
-    name="magician_fake_joint_state_publisher"
+    name="ros_adapter"
     pkg="magician"
     type="magician_fake_joint_state_publisher" />
 
-  <node
+z  <node
     name="robot_state_publisher"
     pkg="robot_state_publisher"
     type="robot_state_publisher" />

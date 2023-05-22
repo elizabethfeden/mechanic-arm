@@ -4,7 +4,8 @@ from copy import deepcopy as copy
 import numpy as np
 
 import rospy
-from sensor_msgs import msg
+from sensor_msgs import msg as sensor_msg
+from visualization_msgs import msg as vis_msg
 from xml.dom import minidom as xml
 
 import dataclasses
@@ -87,7 +88,8 @@ class Adapter:
     self.default_params = (copy(self.free_joints), copy(self.joint_list), copy(self.dependent_joints))
 
   def init_publisher(self):
-    self.pub = rospy.Publisher('joint_states', msg.JointState, queue_size=5)
+    self.pub = rospy.Publisher('joint_states', sensor_msg.JointState, queue_size=5)
+    self.pub_marker = rospy.Publisher('visualization_marker', vis_msg.Marker, queue_size=5)
 
   def joint_mins(self):
     return [self.free_joints[j].min for j in self.export_joint_list]
@@ -105,8 +107,58 @@ class Adapter:
   def send_state(self):
     self.pub.publish(self._compose_message())
 
+  def send_marker_state(self, id, pos):
+    message = vis_msg.Marker()
+    message.header.stamp = rospy.Time.now()
+    message.header.frame_id = 'base_link'
+    message.type = vis_msg.Marker.SPHERE
+    message.action = vis_msg.Marker.ADD
+    message.ns = 'ros_adapter'
+    message.id = id
+    message.pose.position.x = pos[0] / 1000
+    message.pose.position.y = pos[1] / 1000
+    message.pose.position.z = pos[2] / 1000
+    message.pose.orientation.x = 0.0
+    message.pose.orientation.y = 0.0
+    message.pose.orientation.z = 0.0
+    message.pose.orientation.w = 1.0
+    message.scale.x = 0.05
+    message.scale.y = 0.05
+    message.scale.z = 0.05
+    message.color.a = 1.0
+    message.color.r = 0.0
+    message.color.g = 1.0
+    message.color.b = 0.0
+
+    self.pub_marker.publish(message)
+
+  def send_marker_state2(self, id, pos):
+    message = vis_msg.Marker()
+    message.header.stamp = rospy.Time.now()
+    message.header.frame_id = 'base_link'
+    message.type = vis_msg.Marker.SPHERE
+    message.action = vis_msg.Marker.ADD
+    message.ns = 'ros_adapter_trace'
+    message.id = id
+    message.pose.position.x = pos[0] / 1000
+    message.pose.position.y = pos[1] / 1000
+    message.pose.position.z = pos[2] / 1000
+    message.pose.orientation.x = 0.0
+    message.pose.orientation.y = 0.0
+    message.pose.orientation.z = 0.0
+    message.pose.orientation.w = 1.0
+    message.scale.x = 0.01
+    message.scale.y = 0.01
+    message.scale.z = 0.01
+    message.color.a = 1.0
+    message.color.r = 1.0
+    message.color.g = 0.5
+    message.color.b = 0.0
+
+    self.pub_marker.publish(message)
+
   def _compose_message(self):
-    message = msg.JointState()
+    message = sensor_msg.JointState()
     message.header.stamp = rospy.Time.now()
 
     has_position = len(self.dependent_joints.items()) > 0

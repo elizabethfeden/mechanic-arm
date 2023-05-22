@@ -7,7 +7,7 @@ class Robot:
   def __init__(self, joint_mins, joint_maxs):
     # robot config
     self.n_joints = 3
-    self.l1, self.l2, self.l3 = 103, 135, 147
+    self.l1, self.l2, self.l3 = 138, 135, 147
 
     self.joint_mins = np.array(joint_mins)
     self.joint_maxs = np.array(joint_maxs)
@@ -15,6 +15,7 @@ class Robot:
     self.reset()
 
   def reset(self):
+    # self.positions = (self.joint_mins + self.joint_maxs) / 2
     self.positions = np.zeros((self.n_joints,))
     self.apply_action(0)  # clamp
 
@@ -28,6 +29,7 @@ class Robot:
   def tip_pos(self):
     s1, s2, s3 = [math.sin(x) for x in self.positions]
     c1, c2, c3 = [math.cos(x) for x in self.positions]
+    c3 = -c3
 
     '''
     full matrix (we only use right column because base is always 0)

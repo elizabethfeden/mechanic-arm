@@ -30,7 +30,8 @@ class Fitter:
   def __init__(self):
     self.mean_rewards = []
     self.median_rewards = []
-    self.best_reward = 0
+    self.max_rewards = []
+    self.min_rewards = []
 
   def fit_epoch(self, verbose: Iterable[str] = (), n_jobs: int = 2) -> Agent:
     pass
@@ -54,6 +55,7 @@ class CrossEntropyAgent(Agent):
     
   def action(self, eps=1) -> int:
     proba = self.policy.predict_proba(self.state)[0]
+    # print(self.state)
     if random.random() < eps:
       action = np.random.choice(self.n_actions, p=proba)
     else:
@@ -97,7 +99,6 @@ class CrossEntropyFitter(Fitter):
     
   def _pseudo_fit(self):
     env = self._get_env()
-    self.best_reward = env.MIN_REWARD + 1
 
     state = env.reset()[0]
     X = np.array([state] * env.N_ACTIONS)
@@ -114,6 +115,7 @@ class CrossEntropyFitter(Fitter):
       state, reward, done = env.step_buffer(agent)
       agent.reevaluate(state)
       total_reward += reward
+
     return agent, total_reward
     
   def _refit(self, elites: List[CrossEntropyAgent]):
@@ -166,16 +168,15 @@ class CrossEntropyFitter(Fitter):
     mean, median = rewards.mean(), np.median(rewards)
     self.mean_rewards += [mean]
     self.median_rewards += [median]
+    self.max_rewards += [rewards[indices[-1]]]
+    self.min_rewards += [rewards[indices[0]]]
     if 'rewards' in verbose:
       print(f'=== rewards epoch {self.n_epochs} ===')
-      print(mean, median)  #, rewards[indices])
+      print(f'mean {mean}, median {median},\nmin {rewards[indices[0]]}, max {rewards[indices[-1]]}')
 
-    if rewards[indices[-1]] >= self.best_reward:
-      self.best_reward = rewards[indices[-1]]
-      self._refit(elites)
-      if 'coefs' in verbose:
-        print('=== coefs ===')
-        print(self._policy.coefs_)
+    self._refit(elites)
+    if 'coefs' in verbose:
+      print('=== coefs ===')
+      print(self._policy.coefs_)
 
     return elites[-1]
-    
