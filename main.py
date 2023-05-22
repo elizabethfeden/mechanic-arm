@@ -36,12 +36,14 @@ def run_interactive_simulation():
 
 def run_random_agent():
   simulation.Simulation(
+    env_creator=lambda render: Environment(render),
     agent=agents.Agent(Environment.N_ACTIONS)
   ).run()
 
 
 def run_crossentropy_agent():
   simulation.Simulation(
+    env_creator=lambda render: Environment(render),
     fitter=agents.CrossEntropyFitter(n_sessions=200, n_elites=50),
     parallel=True,
     save_options=(

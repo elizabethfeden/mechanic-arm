@@ -9,7 +9,7 @@ OUT_FILENAME = ('results' if len(sys.argv) <= 1 else
 
 with open(IN_FILENAME, 'r') as file:
   for name in ['means', 'medians', 'best averages']:
-    y = [float(x) for x in file.readline().strip()[1:-1].split(', ')]
+    y = [float(x) for x in file.readline().strip()[1:-1].split(', ')][:151]
     plt.plot(range(len(y)), y, label=name)
   plt.xlabel('Epochs')
   plt.ylabel('Reward')

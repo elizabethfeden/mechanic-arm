@@ -2,10 +2,12 @@
 
 import enum
 import multiprocessing as mp
+
+import gym
 import numpy as np
 import pickle
 
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import agents
 from environment import Environment
@@ -16,10 +18,10 @@ def _run_fitter(fitter: agents.Fitter,
                 results_pipe_in: mp.connection.Connection,
                 running_pipe_out: mp.connection.Connection):
   while running_pipe_out.recv():
-    best = fitter.fit_epoch(verbose=('rewards',))
+    best = fitter.fit_epoch(verbose=('rewards'))
     best_pipe_in.send(best)
 
-  results_pipe_in.send((fitter.mean_rewards, fitter.median_rewards))
+  results_pipe_in.send((fitter.mean_rewards, fitter.median_rewards, fitter.min_rewards, fitter.max_rewards))
   best_pipe_in.close()
   running_pipe_out.close()
   results_pipe_in.close()
@@ -30,12 +32,15 @@ class SaveOption(enum.Enum):
   MOVING_AVERAGES = 1,
   MEAN_REWARDS = 2,
   MEDIAN_REWARDS = 3,
+  MIN_REWARDS = 4,
+  MAX_REWARDS = 5,
 
 
 class Simulation:
   """Manages the interactions between fitters and presentation.
 
   Attributes:
+    `env_creator`: gym.Env constructor, accepts argument `render: bool`
     `agent` or `fitter`: correspondent objects of `agents.py` entities. Exactly
         one of these two must be not None.
     `parallel`: should multiprocessing be used (one process for fitting, another
@@ -50,6 +55,7 @@ class Simulation:
 
   """
   def __init__(self,
+               env_creator: Callable[[bool], gym.Env],
                agent: Optional[agents.Agent] = None,
                fitter: Optional[agents.Fitter] = None,
                parallel: bool = False,
@@ -61,9 +67,10 @@ class Simulation:
     self.save_options = save_options
     self.moving_average_num = moving_average_num
 
-    self.env = Environment(pygame_render=True)
+    self.env_creator = env_creator
+    self.env = env_creator(True)
 
-    self.averages, self.mean_rewards, self.median_rewards = [], [], []
+    self.averages, self.mean_rewards, self.median_rewards, self.min_rewards, self.max_rewards = [], [], [], [], []
 
     if self.parallel:
       self._best_pipe_out, self._best_pipe_in = mp.Pipe()
@@ -100,6 +107,8 @@ class Simulation:
       self.env.window.render_stats(total, wins, running)
       self.env.render()
 
+    print('total rew', total_reward)
+
     return running, total_reward
 
   def run(self):
@@ -108,7 +117,7 @@ class Simulation:
       self._running_pipe_in.send(True)
 
     wins, total = 0, 0
-    rewards = np.array([0] * self.moving_average_num)
+    rewards = np.array([0.] * self.moving_average_num)
     current_index = 0
     running = True
     while running:
@@ -117,6 +126,7 @@ class Simulation:
       elif self.parallel:
         self._running_pipe_in.send(running)
       running, total_reward = self._simulate_one_game(total, wins)
+      running = running and total < 150
       if self.parallel and not running:
         self._running_pipe_in.send(False)
 
@@ -128,10 +138,12 @@ class Simulation:
       self.averages += [rewards.mean()]
 
     if self.parallel:
-      self.mean_rewards, self.median_rewards = self._results_pipe_out.recv()
+      self.mean_rewards, self.median_rewards, self.min_rewards, self.max_rewards = self._results_pipe_out.recv()
     elif self.fitter is not None:
       self.mean_rewards = self.fitter.mean_rewards
       self.median_rewards = self.fitter.median_rewards
+      self.min_rewards = self.fitter.min_rewards
+      self.max_rewards = self.fitter.max_rewards
 
   def _save_results(self):
     if not self.save_options:
@@ -148,6 +160,8 @@ class Simulation:
         SaveOption.MEAN_REWARDS: self.mean_rewards,
         SaveOption.MEDIAN_REWARDS: self.median_rewards,
         SaveOption.MOVING_AVERAGES: self.averages,
+        SaveOption.MIN_REWARDS: self.min_rewards,
+        SaveOption.MAX_REWARDS: self.max_rewards,
       }
       for option in self.save_options:
         if option in option_values:
